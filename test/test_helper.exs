@@ -1,2 +1,2 @@
 ExUnit.start()
-File.rm( "test/dbs/temp.dets" )
+File.rm("test/dbs/temp.dets")
