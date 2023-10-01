@@ -177,4 +177,16 @@ defmodule AdeptDetsTest do
     :ok = Dets.close( db )
   end
 
+  test "can use multiple dbs simultaneously" do
+    File.rm(@path_temp)
+    {:ok, dbt} = Dets.open( @path_temp )
+    {:ok, dbe} = Dets.open( @path_existing )
+
+    assert Dets.count(dbt) == 0
+    assert Dets.count(dbe) == 2
+
+    :ok = Dets.close( dbt )
+    :ok = Dets.close( dbe )
+  end
+
 end
