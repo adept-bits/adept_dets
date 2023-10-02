@@ -1,7 +1,42 @@
 defmodule Adept.Dets do
   @moduledoc """
   Documentation for `Adept.Dets`.
+
+  A very simple `:dets` wrapper.
+
+  The main idea behind adept_deps is to be able to treat a `:dets` database like a peristant Map
+  in Elixir. You open and close the file, then treat the rest of it _sort of_ like now you
+  would treat a map. Sort of because it isn't really immutable functional programming. This
+  is all about side-affect extenal persistance.
+
+  The file extension doesn't really matter. That is just a convenience. You can use
+  whatever extension you want. Make it your own!
+
+  ```elixir
+  # open a local dets database file
+  {:ok, db} = Adept.Dets.open( "my_file.dets" )
+
+  # Add an object to the database. Like a map, both the id and the object can be any term.
+  # Unlike a map, the result is :ok. Use the db reference to to access the data.
+  :ok = Adept.Dets.put( db, "my_key", {"some data", 1234})
+
+  # retrieve an object from the database
+  obj = Adept.Dets.get( db, "my_key")
+  obj = Adept.Dets.get!( db, "my_key")
+  {:ok, ojb} = Adept.Dets.fetch( db, "my_key")
+
+  # delete an object from the database
+  :ok = Adept.Dets.delete( db, "my_key" )
+
+  # close the file cleanly
+  :ok = Adept.Dets.close( db )
+  ```
+
+  Note that dets does involve ets tables and the like, so it's context is held on the process
+  that calls open. If you want it open for a long time, you should open it in a process that
+  is tracked in a supervisor somehwere.
   """
+
   alias :dets, as: Dets
 
   @type t :: {__MODULE__, any}
@@ -27,29 +62,29 @@ defmodule Adept.Dets do
   # --------------------------------------------------------
   # accessors
 
+  @doc "Fetch an object from the db. Similar to Map.get"
   @spec get(db :: t(), id :: any) :: any
   def get({__MODULE__, name}, id) when is_binary(id), do: do_get(name, id)
-
-  def do_get(name, id) do
+  defp do_get(name, id) do
     case Dets.lookup(name, id) do
       [{^id, obj}] -> obj
       [] -> nil
     end
   end
 
+  @doc "Fetch an object from the db. Similar to Map.get!"
   @spec get!(db :: t(), id :: any) :: any
   def get!({__MODULE__, name}, id) when is_binary(id), do: do_get!(name, id)
-
-  def do_get!(name, id) do
+  defp do_get!(name, id) do
     case Dets.lookup(name, id) do
       [{^id, obj}] -> obj
       err -> raise "Lookup Failed #{inspect(err)}"
     end
   end
 
+  @doc "Fetch an object from the db. Similar to Map.fetch"
   @spec fetch(db :: t(), id :: any) :: {:ok, any} | :error
   def fetch({__MODULE__, name}, id) when is_binary(id), do: do_fetch(name, id)
-
   defp do_fetch(name, id) do
     case Dets.lookup(name, id) do
       [{^id, obj}] -> {:ok, obj}
@@ -57,6 +92,7 @@ defmodule Adept.Dets do
     end
   end
 
+  @doc "Return all the keys in the db as a single list."
   @spec keys(db :: t()) :: list(any)
   def keys({__MODULE__, name}), do: do_keys(name, Dets.first(name), [])
   defp do_keys(_name, :"$end_of_table", acc), do: Enum.reverse(acc)
@@ -67,11 +103,13 @@ defmodule Adept.Dets do
     keys(db) |> Enum.map(fn k -> {k, do_get(name, k)} end)
   end
 
+  @doc "Load the entire contents of a db into a single map."
   @spec load(db :: t()) :: map
   def load({__MODULE__, _} = db) do
     list(db) |> Enum.into(%{})
   end
 
+  @doc "Test if a key is in the database"
   @spec member?(db :: t(), id :: any) :: boolean
   def member?({__MODULE__, name}, id), do: Dets.member(name, id)
 
@@ -82,26 +120,41 @@ defmodule Adept.Dets do
 
   defp do_reduce(name, default, func), do: Dets.foldr(func, default, name)
 
+  @doc "Count the objects in the database"
   @spec count(db :: t()) :: non_neg_integer
-  def count({__MODULE__, name}) do
-    do_reduce(name, 0, fn _, acc -> acc + 1 end)
+  def count({__MODULE__, _} = db) do
+    db
+    |> keys()
+    |> Enum.count()
   end
 
   # --------------------------------------------------------
+  @doc """
+  Add one or more objects to the database. Overwrites existing data.
 
+  ```elixir
+  put( db, "my_key", "some_data" )
+  put( db, [{"key_a", "data_a"}, {"key_b", "data_b"}] )
+  ```
+  """
   @spec put(db :: t(), id :: any, obj :: any) :: :ok
   def put({__MODULE__, name}, id, obj) do
     Dets.insert(name, {id, obj})
   end
-
   def put({__MODULE__, name}, objs) when is_list(objs) do
     Dets.insert(name, objs)
   end
-
   def put(db, %{} = objs) do
     put(db, Enum.into(objs, []))
   end
 
+  @doc """
+  Add an object to the database. - but only if it don't already exist.
+
+  ```elixir
+  put_new( db, "my_key", "some_data" )
+  ```
+  """
   @spec put_new(db :: t(), id :: any, obj :: any) :: :ok | :error
   def put_new({__MODULE__, name}, id, obj) do
     case Dets.insert_new(name, {id, obj}) do
@@ -109,14 +162,20 @@ defmodule Adept.Dets do
       false -> :error
     end
   end
+  @doc """
+  Add muliple objects to the database. - but only if they don't already exist.
 
+  ```elixir
+  put_new( db, [{"key_a", "data_a"}, {"key_b", "data_b"}] )
+  put_new( db, %{"key_a" => "data_a", "key_b" => "data_b"} )
+  ```
+  """
   def put_new({__MODULE__, name}, objs) when is_list(objs) do
     case Dets.insert_new(name, objs) do
       true -> :ok
       false -> :error
     end
   end
-
   def put_new(db, %{} = objs) do
     put_new(db, Enum.into(objs, []))
   end
