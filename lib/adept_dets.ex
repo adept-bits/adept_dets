@@ -65,6 +65,7 @@ defmodule Adept.Dets do
   @doc "Fetch an object from the db. Similar to Map.get"
   @spec get(db :: t(), id :: any) :: any
   def get({__MODULE__, name}, id) when is_binary(id), do: do_get(name, id)
+
   defp do_get(name, id) do
     case Dets.lookup(name, id) do
       [{^id, obj}] -> obj
@@ -75,6 +76,7 @@ defmodule Adept.Dets do
   @doc "Fetch an object from the db. Similar to Map.get!"
   @spec get!(db :: t(), id :: any) :: any
   def get!({__MODULE__, name}, id) when is_binary(id), do: do_get!(name, id)
+
   defp do_get!(name, id) do
     case Dets.lookup(name, id) do
       [{^id, obj}] -> obj
@@ -85,6 +87,7 @@ defmodule Adept.Dets do
   @doc "Fetch an object from the db. Similar to Map.fetch"
   @spec fetch(db :: t(), id :: any) :: {:ok, any} | :error
   def fetch({__MODULE__, name}, id) when is_binary(id), do: do_fetch(name, id)
+
   defp do_fetch(name, id) do
     case Dets.lookup(name, id) do
       [{^id, obj}] -> {:ok, obj}
@@ -141,9 +144,11 @@ defmodule Adept.Dets do
   def put({__MODULE__, name}, id, obj) do
     Dets.insert(name, {id, obj})
   end
+
   def put({__MODULE__, name}, objs) when is_list(objs) do
     Dets.insert(name, objs)
   end
+
   def put(db, %{} = objs) do
     put(db, Enum.into(objs, []))
   end
@@ -162,6 +167,7 @@ defmodule Adept.Dets do
       false -> :error
     end
   end
+
   @doc """
   Add muliple objects to the database. - but only if they don't already exist.
 
@@ -176,6 +182,7 @@ defmodule Adept.Dets do
       false -> :error
     end
   end
+
   def put_new(db, %{} = objs) do
     put_new(db, Enum.into(objs, []))
   end

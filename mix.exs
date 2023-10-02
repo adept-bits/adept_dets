@@ -11,7 +11,7 @@ defmodule AdeptDets.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       dialyzer: [plt_add_deps: :app_tree, plt_add_apps: [:mix, :iex]],
-      docs: docs(),
+      docs: docs()
     ]
   end
 
@@ -38,5 +38,4 @@ defmodule AdeptDets.MixProject do
       # homepage_url: "http://kry10.com",
     ]
   end
-
 end
