@@ -64,6 +64,7 @@ defmodule Adept.Dets do
 
   @doc "Fetch an object from the db. Similar to Map.get"
   @spec get(db :: t(), id :: any) :: any
+  def get(db, id)
   def get({__MODULE__, name}, id) when is_binary(id), do: do_get(name, id)
 
   defp do_get(name, id) do
@@ -75,6 +76,7 @@ defmodule Adept.Dets do
 
   @doc "Fetch an object from the db. Similar to Map.get!"
   @spec get!(db :: t(), id :: any) :: any
+  def get!(db, id)
   def get!({__MODULE__, name}, id) when is_binary(id), do: do_get!(name, id)
 
   defp do_get!(name, id) do
@@ -86,6 +88,7 @@ defmodule Adept.Dets do
 
   @doc "Fetch an object from the db. Similar to Map.fetch"
   @spec fetch(db :: t(), id :: any) :: {:ok, any} | :error
+  def fetch(db, id)
   def fetch({__MODULE__, name}, id) when is_binary(id), do: do_fetch(name, id)
 
   defp do_fetch(name, id) do
@@ -97,26 +100,34 @@ defmodule Adept.Dets do
 
   @doc "Return all the keys in the db as a single list."
   @spec keys(db :: t()) :: list(any)
+  def keys(db)
   def keys({__MODULE__, name}), do: do_keys(name, Dets.first(name), [])
   defp do_keys(_name, :"$end_of_table", acc), do: Enum.reverse(acc)
   defp do_keys(name, key, acc), do: do_keys(name, Dets.next(name, key), [key | acc])
 
   @spec list(db :: t()) :: list({any, any})
+  def list(db)
+
   def list({__MODULE__, name} = db) do
     keys(db) |> Enum.map(fn k -> {k, do_get(name, k)} end)
   end
 
   @doc "Load the entire contents of a db into a single map."
   @spec load(db :: t()) :: map
+  def load(db)
+
   def load({__MODULE__, _} = db) do
     list(db) |> Enum.into(%{})
   end
 
   @doc "Test if a key is in the database"
   @spec member?(db :: t(), id :: any) :: boolean
+  def member?(db, id)
   def member?({__MODULE__, name}, id), do: Dets.member(name, id)
 
   @spec reduce(db :: t(), default :: any, (any, any -> any)) :: any
+  def reduce(db, default, func)
+
   def reduce({__MODULE__, name}, default, func) when is_function(func, 2) do
     do_reduce(name, default, func)
   end
@@ -125,6 +136,8 @@ defmodule Adept.Dets do
 
   @doc "Count the objects in the database"
   @spec count(db :: t()) :: non_neg_integer
+  def count(db)
+
   def count({__MODULE__, _} = db) do
     db
     |> keys()
@@ -141,9 +154,13 @@ defmodule Adept.Dets do
   ```
   """
   @spec put(db :: t(), id :: any, obj :: any) :: :ok
+  def put(db, key, obj)
+
   def put({__MODULE__, name}, id, obj) do
     Dets.insert(name, {id, obj})
   end
+
+  def put(db, objects)
 
   def put({__MODULE__, name}, objs) when is_list(objs) do
     Dets.insert(name, objs)
@@ -161,6 +178,8 @@ defmodule Adept.Dets do
   ```
   """
   @spec put_new(db :: t(), id :: any, obj :: any) :: :ok | :error
+  def put_new(db, key, object)
+
   def put_new({__MODULE__, name}, id, obj) do
     case Dets.insert_new(name, {id, obj}) do
       true -> :ok
@@ -176,6 +195,8 @@ defmodule Adept.Dets do
   put_new( db, %{"key_a" => "data_a", "key_b" => "data_b"} )
   ```
   """
+  def put_new(db, objects)
+
   def put_new({__MODULE__, name}, objs) when is_list(objs) do
     case Dets.insert_new(name, objs) do
       true -> :ok
@@ -195,11 +216,15 @@ defmodule Adept.Dets do
   # uses erlang match syntax...
 
   @spec match(db :: t(), pattern :: any) :: [[any]] | {:error, any}
+  def match(db, erlang_pattern)
+
   def match({__MODULE__, name}, pattern) do
     Dets.match(name, pattern)
   end
 
   @spec match_delete(db :: t(), pattern :: any) :: :ok
+  def match_delete(db, erlang_pattern)
+
   def match_delete({__MODULE__, name}, pattern) do
     Dets.match_delete(name, pattern)
     :ok
@@ -208,8 +233,12 @@ defmodule Adept.Dets do
   # --------------------------------------------------------
 
   @spec info(db :: t()) :: list()
+  @doc "Get info about the database"
+  def info(db)
   def info({__MODULE__, name}), do: Dets.info(name)
 
   @spec sync(db :: t()) :: :ok | {:error, reason :: any}
+  @doc "Force the database to be written to disk immediately"
+  def sync(db)
   def sync({__MODULE__, name}), do: Dets.sync(name)
 end
